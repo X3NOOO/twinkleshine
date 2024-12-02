@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/X3NOOO/twinkleshine/ai"
 	"github.com/X3NOOO/twinkleshine/commands"
 	"github.com/bwmarrin/discordgo"
 )
@@ -111,12 +112,24 @@ func (b *bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 	}
 }
 
-func NewBot(token string, commands []commands.Command) (*bot, error) {
+func NewBot(token string) (*bot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		log.Printf("Invalid bot parameters: %v\n", err)
 		return nil, err
 	}
+
+	ai, err := ai.NewAI()
+	if err != nil {
+		log.Printf("Cannot create AI: %v\n", err)
+		return nil, err
+	}
+
+	ctx := &commands.CommandContext{
+		AI: ai,
+	}
+
+	commands := ctx.GetCommands()
 
 	bot := &bot{
 		s:        session,

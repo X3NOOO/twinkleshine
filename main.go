@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/X3NOOO/twinkleshine/commands"
 	"github.com/joho/godotenv"
 )
 
@@ -32,7 +31,7 @@ func main() {
 
 	_ = godotenv.Load(envFlag)
 
-	bot, err := NewBot(os.Getenv("DISCORD_TOKEN"), commands.ALL_COMMANDS)
+	bot, err := NewBot(os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
 		log.Fatalf("Cannot create the bot: %v", err)
 	}

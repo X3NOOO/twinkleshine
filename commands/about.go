@@ -1,4 +1,4 @@
-package about
+package commands
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func AboutHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+func (c *CommandContext) AboutHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
