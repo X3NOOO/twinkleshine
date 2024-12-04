@@ -126,7 +126,7 @@ func NewBot(token string) (*bot, error) {
 	}
 
 	ctx := &commands.CommandContext{
-		AI: ai,
+		AI: *ai,
 	}
 
 	commands := ctx.GetCommands()

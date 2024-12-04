@@ -1,6 +1,9 @@
 package commands
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/X3NOOO/twinkleshine/ai"
+	"github.com/bwmarrin/discordgo"
+)
 
 type Command struct {
 	Name        string
@@ -11,9 +14,7 @@ type Command struct {
 }
 
 type CommandContext struct {
-	AI interface {
-		Query(text string) (string, error)
-	}
+	AI ai.TwinkleshineAI
 }
 
 func (c *CommandContext) GetCommands() []Command {

@@ -1,14 +1,86 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
-	"time"
+	"io"
+	"log"
+	"net/http"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/X3NOOO/twinkleshine/commands/remember"
+	"github.com/X3NOOO/twinkleshine/ai"
 )
+
+func rememberFile(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.TwinkleshineAI) error {
+	options := i.ApplicationCommandData().Options
+
+	fileOption := options[0].Options[0]
+	attachment := i.ApplicationCommandData().Resolved.Attachments[fileOption.Value.(string)]
+
+	resp, err := http.Get(attachment.URL)
+	if err != nil {
+		return fmt.Errorf("failed to download file: %v", err)
+	}
+	defer resp.Body.Close()
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read file content: %v", err)
+	}
+
+	err = ai.RememberFile(content, map[string]any{
+		"file": map[string]any{
+			"name": attachment.Filename,
+			"url":  attachment.URL,
+		},
+	})
+	if err != nil {
+		msg := fmt.Sprintf("Failed to remember file: %v", err)
+		err = fmt.Errorf("failed to remember file: %v", err)
+
+		_, derr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
+		if derr != nil {
+			return fmt.Errorf("failed to send error (%v) response: %v", err, derr)
+		}
+	}
+
+	msg := "Done!"
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &msg,
+	})
+
+	return err
+}
+
+func rememberText(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.TwinkleshineAI) error {
+	options := i.ApplicationCommandData().Options
+	text := options[0].Options[0].StringValue()
+
+	err := ai.Remember(text)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to remember text: %v", err)
+		err = fmt.Errorf("failed to remember text: %v", err)
+
+		_, derr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
+		if derr != nil {
+			return fmt.Errorf("failed to send error (%v) response: %v", err, derr)
+		}
+
+		return err
+	}
+
+	msg := "Done!"
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &msg,
+	})
+
+	return err
+}
 
 func (c *CommandContext) RememberCLIHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -26,9 +98,18 @@ func (c *CommandContext) RememberCLIHandler(s *discordgo.Session, i *discordgo.I
 
 	switch subcommand {
 	case "file":
-		remember.RememberFile(s, i)
+		err = rememberFile(s, i, c.AI)
 	case "text":
-		remember.RememberText(s, i)
+		err = rememberText(s, i, c.AI)
+	default:
+		msg := "Unknown subcommand"
+		err := fmt.Errorf("unknown subcommand: %v", subcommand)
+		_, derr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
+		if derr != nil {
+			return fmt.Errorf("failed to send error (%v) response: %v", err, derr)
+		}
 	}
 
 	return err
@@ -38,23 +119,84 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Uploading...",
+			Content: "Uploading attachments...",
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {
-		return errors.New("failed to send initial response: " + err.Error())
+		return fmt.Errorf("failed to send initial response: %v", err)
 	}
 
-	time.Sleep(10 * time.Second)
+	attachments := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID].Attachments
+	if len(attachments) == 0 {
+		msg := "No attachments found."
+		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
+		return err
+	}
 
-	msg := "[TODO] Uploaded successfully!"
+	errs := make(chan error, len(attachments))
 
+	for _, att := range attachments {
+		go func(att *discordgo.MessageAttachment) {
+			log.Printf("Processing attachment: %s", att.Filename)
+
+			resp, err := http.Get(att.URL)
+			if err != nil {
+				log.Printf("Failed to download %s: %v", att.Filename, err)
+				errs <- fmt.Errorf("failed to download %s: %v", att.Filename, err)
+				return
+			}
+			defer resp.Body.Close()
+
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("Failed to read data %s: %v", att.Filename, err)
+				errs <- fmt.Errorf("failed to read data %s: %v", att.Filename, err)
+				return
+			}
+
+			err = c.AI.RememberFile(data, map[string]any{
+				"file": map[string]any{
+					"name": att.Filename,
+					"url":  att.URL,
+				},
+			})
+			if err != nil {
+				log.Printf("Failed to remember file %s: %v", att.Filename, err)
+				errs <- fmt.Errorf("failed to remember file %s: %v", att.Filename, err)
+				return
+			}
+
+			log.Printf("Successfully remembered file: %s", att.Filename)
+
+			errs <- nil
+		}(att)
+	}
+
+	var failedUploads []string
+
+	for i := 0; i < len(attachments); i++ {
+		if err := <-errs; err != nil {
+			failedUploads = append(failedUploads, err.Error())
+		}
+	}
+
+	if len(failedUploads) > 0 {
+		msg := "Some attachments failed to upload:\n" + strings.Join(failedUploads, "\n")
+		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
+		})
+		return err
+	}
+
+	msg := "Done!"
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &msg,
 	})
 	if err != nil {
-		return errors.New("failed to edit response: " + err.Error())
+		return fmt.Errorf("failed to edit response: %v", err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ module github.com/X3NOOO/twinkleshine
 go 1.22.7
 
 require (
+	github.com/X3NOOO/llamaparse-go v0.0.0-20240721121555-42d3cec040ee
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/joho/godotenv v1.5.1
 	github.com/tmc/langchaingo v0.1.12
@@ -31,6 +32,11 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.4 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
+	gitlab.com/golang-commonmark/html v0.0.0-20191124015941-a22733972181 // indirect
+	gitlab.com/golang-commonmark/linkify v0.0.0-20191026162114-a0c2df6c8f82 // indirect
+	gitlab.com/golang-commonmark/markdown v0.0.0-20211110145824-bf3e522c626a // indirect
+	gitlab.com/golang-commonmark/mdurl v0.0.0-20191124015652-932350d1cb84 // indirect
+	gitlab.com/golang-commonmark/puny v0.0.0-20191124015043-9f83538fa04f // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.51.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
