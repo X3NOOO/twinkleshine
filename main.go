@@ -33,12 +33,12 @@ func main() {
 
 	bot, err := NewBot(os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
-		log.Fatalf("Cannot create the bot: %v", err)
+		log.Fatalf("Cannot create the bot: %v\n", err)
 	}
 
 	err = bot.Run()
 	if err != nil {
-		log.Fatalf("Error running bot: %v", err)
+		log.Fatalf("Error running bot: %v\n", err)
 	}
 
 	fmt.Println("Bot is now running. Press CTRL+C to exit.")
@@ -50,7 +50,7 @@ func main() {
 	fmt.Println("Shutting down...")
 	err = bot.Stop()
 	if err != nil {
-		log.Fatalf("Error stopping bot: %v", err)
+		log.Fatalf("Error stopping bot: %v\n", err)
 	}
 	fmt.Println("\nBye!")
 }

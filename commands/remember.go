@@ -167,11 +167,11 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 
 	for _, att := range attachments {
 		go func(att *discordgo.MessageAttachment) {
-			log.Printf("Processing attachment: %s", att.Filename)
+			log.Println("Processing attachment:", att.Filename)
 
 			resp, err := http.Get(att.URL)
 			if err != nil {
-				log.Printf("Failed to download %s: %v", att.Filename, err)
+				log.Printf("Failed to download %s: %v\n", att.Filename, err)
 				errs <- fmt.Errorf("failed to download %s: %v", att.Filename, err)
 				return
 			}
@@ -179,7 +179,7 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 
 			data, err := io.ReadAll(resp.Body)
 			if err != nil {
-				log.Printf("Failed to read data %s: %v", att.Filename, err)
+				log.Printf("Failed to read data %s: %v\n", att.Filename, err)
 				errs <- fmt.Errorf("failed to read data %s: %v", att.Filename, err)
 				return
 			}
@@ -192,12 +192,12 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 				},
 			})
 			if err != nil {
-				log.Printf("Failed to remember file %s: %v", att.Filename, err)
+				log.Printf("Failed to remember file %s: %v\n", att.Filename, err)
 				errs <- fmt.Errorf("failed to remember file %s: %v", att.Filename, err)
 				return
 			}
 
-			log.Printf("Successfully remembered file: %s", att.Filename)
+			log.Println("Successfully remembered file:", att.Filename)
 
 			errs <- nil
 		}(att)
