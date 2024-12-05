@@ -22,6 +22,8 @@ type options struct {
 	MinMsgLen    int
 	ChunkLength  int
 	ChunkOverlap int
+	SystemPrompt string
+	RagPrompt    string
 }
 
 type TwinkleshineAI struct {
@@ -130,11 +132,25 @@ func getOptions() (*options, error) {
 		return nil, fmt.Errorf("error parsing CHUNK_OVERLAP: %v", err)
 	}
 
+	systemPromptEnv, ok := os.LookupEnv("SYSTEM_PROMPT")
+	if !ok {
+		return nil, errors.New("SYSTEM_PROMPT not set")
+	}
+	systemPrompt := strings.ReplaceAll(strings.TrimSpace(systemPromptEnv), "\\n", "\n")
+
+	ragPromptEnv, ok := os.LookupEnv("RAG_PROMPT")
+	if !ok {
+		return nil, errors.New("RAG_PROMPT not set")
+	}
+	ragPrompt := strings.ReplaceAll(strings.TrimSpace(ragPromptEnv), "\\n", "\n")
+
 	options := &options{
 		CallOptions:  callOptions,
 		MinMsgLen:    minMsgLen,
 		ChunkLength:  chunkLen,
 		ChunkOverlap: chunkOverlap,
+		SystemPrompt: systemPrompt,
+		RagPrompt:    ragPrompt,
 	}
 
 	return options, nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	// "os"
 
 	"github.com/X3NOOO/twinkleshine/ai"
 	"github.com/X3NOOO/twinkleshine/commands"
@@ -138,6 +139,9 @@ func NewBot(token string) (*bot, error) {
 
 	bot.s.AddHandler(bot.onReady)
 	bot.s.AddHandler(bot.onInteractionCreate)
+
+	// log.Println(ai.Query("Jak dekarboksylować THCa do THC?"))
+	// os.Exit(0)
 
 	return bot, nil
 }

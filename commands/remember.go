@@ -29,10 +29,11 @@ func rememberFile(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 		return fmt.Errorf("failed to read file content: %v", err)
 	}
 
+	messageLink := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID)
 	err = ai.RememberFile(content, map[string]any{
 		"file": map[string]any{
 			"name": attachment.Filename,
-			"url":  attachment.URL,
+			"url":  messageLink,
 		},
 	})
 	if err != nil {
@@ -157,10 +158,11 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 				return
 			}
 
+			messageLink := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID)
 			err = c.AI.RememberFile(data, map[string]any{
 				"file": map[string]any{
 					"name": att.Filename,
-					"url":  att.URL,
+					"url":  messageLink,
 				},
 			})
 			if err != nil {
