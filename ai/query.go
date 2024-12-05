@@ -11,5 +11,5 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 		return "", errors.New("message is too short")
 	}
 
-	return llms.GenerateFromSinglePrompt(a.ctx, a.Model, text, llms.WithOptions(a.options))
+	return llms.GenerateFromSinglePrompt(a.ctx, a.Model, text, llms.WithOptions(a.options.CallOptions))
 }

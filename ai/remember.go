@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"slices"
@@ -28,16 +27,15 @@ func parse(body []byte) (string, error) {
 	}
 }
 
-func parseFile(body []byte) ([]string, error) {
+func parseFile(body []byte, chunkLength int, chunkOverlap int) ([]string, error) {
 	parsed, err := parse(body)
 	if err != nil {
 		return nil, err
 	}
 
-	// gotta love hardcoded values
 	slitter := textsplitter.NewRecursiveCharacter(
-		textsplitter.WithChunkSize(500),
-		textsplitter.WithChunkOverlap(50),
+		textsplitter.WithChunkSize(chunkLength),
+		textsplitter.WithChunkOverlap(chunkOverlap),
 		textsplitter.WithSeparators([]string{"\n\n", "\n", ". ", "! ", "? ", ".\n", "!\n", "?\n"}),
 	)
 
@@ -51,7 +49,7 @@ func parseFile(body []byte) ([]string, error) {
 
 func (a *TwinkleshineAI) Remember(text string) error {
 	_, err := a.VDB.AddDocuments(
-		context.Background(),
+		a.ctx,
 		[]schema.Document{
 			{
 				PageContent: text,
@@ -63,7 +61,7 @@ func (a *TwinkleshineAI) Remember(text string) error {
 }
 
 func (a *TwinkleshineAI) RememberFile(body []byte, metadata map[string]any) error {
-	chunks, err := parseFile(body)
+	chunks, err := parseFile(body, a.options.ChunkLength, a.options.ChunkOverlap)
 	if err != nil {
 		return err
 	}
@@ -72,7 +70,7 @@ func (a *TwinkleshineAI) RememberFile(body []byte, metadata map[string]any) erro
 	for _, chunk := range chunks {
 		go func(c string) {
 			_, err := a.VDB.AddDocuments(
-				context.Background(),
+				a.ctx,
 				[]schema.Document{
 					{
 						PageContent: c,

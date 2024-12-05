@@ -3,6 +3,8 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -15,9 +17,16 @@ import (
 	"github.com/tmc/langchaingo/vectorstores/qdrant"
 )
 
+type options struct {
+	CallOptions  llms.CallOptions
+	MinMsgLen    int
+	ChunkLength  int
+	ChunkOverlap int
+}
+
 type TwinkleshineAI struct {
 	ctx     context.Context
-	options llms.CallOptions
+	options options
 	Model   llms.Model
 	VDB     vectorstores.VectorStore
 }
@@ -44,7 +53,7 @@ func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
 
 	switch strings.ToLower(strings.TrimSpace(providerEnv)) {
 	case "google":
-		llm, err := googleai.New(ctx, googleai.WithAPIKey(apiKey))
+		llm, err = googleai.New(ctx, googleai.WithAPIKey(apiKey))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -59,7 +68,7 @@ func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
 	return llm, embedder, err
 }
 
-func getOptions() (*llms.CallOptions, error) {
+func getOptions() (*options, error) {
 	modelEnv, ok := os.LookupEnv("LLM_MODEL")
 	if !ok {
 		return nil, errors.New("LLM_MODEL not set")
@@ -84,14 +93,51 @@ func getOptions() (*llms.CallOptions, error) {
 		return nil, err
 	}
 
-	options := llms.CallOptions{
+	callOptions := llms.CallOptions{
 		Model:          model,
 		Temperature:    temperature,
 		MaxTokens:      maxTokens,
 		CandidateCount: 1,
 	}
 
-	return &options, nil
+	minMsgLenEnv, ok := os.LookupEnv("MIN_MESSAGE_LENGTH")
+	if !ok {
+		log.Print("MIN_MESSAGE_LENGTH not set, using default value 20")
+		minMsgLenEnv = "20"
+	}
+	minMsgLen, err := strconv.Atoi(minMsgLenEnv)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing MIN_MESSAGE_LENGTH: %v", err)
+	}
+
+	chunkLenEnv, ok := os.LookupEnv("CHUNK_LENGTH")
+	if !ok {
+		log.Println("CHUNK_LENGTH not set, using default value 1000")
+		chunkLenEnv = "1000"
+	}
+	chunkLen, err := strconv.Atoi(chunkLenEnv)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing CHUNK_LENGTH: %v", err)
+	}
+
+	chunkOverlapEnv, ok := os.LookupEnv("CHUNK_OVERLAP")
+	if !ok {
+		log.Println("CHUNK_OVERLAP not set, using default value 100")
+		chunkOverlapEnv = "100"
+	}
+	chunkOverlap, err := strconv.Atoi(chunkOverlapEnv)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing CHUNK_OVERLAP: %v", err)
+	}
+
+	options := &options{
+		CallOptions:  callOptions,
+		MinMsgLen:    minMsgLen,
+		ChunkLength:  chunkLen,
+		ChunkOverlap: chunkOverlap,
+	}
+
+	return options, nil
 }
 
 func getVDB(embedderImpl embeddings.EmbedderImpl) (*vectorstores.VectorStore, error) {
