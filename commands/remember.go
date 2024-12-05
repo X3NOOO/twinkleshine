@@ -60,7 +60,7 @@ func rememberText(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 	options := i.ApplicationCommandData().Options
 	text := options[0].Options[0].StringValue()
 
-	err := ai.Remember(text)
+	err := ai.Remember(text, nil)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to remember text: %v", err)
 		err = fmt.Errorf("failed to remember text: %v", err)

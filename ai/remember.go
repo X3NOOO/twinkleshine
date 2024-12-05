@@ -47,12 +47,13 @@ func parseFile(body []byte, chunkLength int, chunkOverlap int) ([]string, error)
 	return chunks, nil
 }
 
-func (a *TwinkleshineAI) Remember(text string) error {
+func (a *TwinkleshineAI) Remember(text string, metadata map[string]any) error {
 	_, err := a.VDB.AddDocuments(
 		a.ctx,
 		[]schema.Document{
 			{
 				PageContent: text,
+				Metadata:    metadata,
 			},
 		},
 	)
