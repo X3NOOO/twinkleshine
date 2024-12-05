@@ -120,7 +120,7 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Uploading attachments...",
+			Content: "Uploading...",
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -130,7 +130,33 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 
 	attachments := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID].Attachments
 	if len(attachments) == 0 {
-		msg := "No attachments found."
+		messageContent := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID].Content
+		if messageContent == "" {
+			msg := "No attachments or message content found."
+			_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+				Content: &msg,
+			})
+			return err
+		}
+
+		err = c.AI.Remember(messageContent, map[string]any{
+			"file": map[string]any{
+				"name": "Message",
+				"url":  fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID),
+			},
+		})
+		if err != nil {
+			msg := fmt.Sprintf("Failed to remember message content: %v", err)
+			_, derr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+				Content: &msg,
+			})
+			if derr != nil {
+				return fmt.Errorf("failed to send error response: %v", derr)
+			}
+			return err
+		}
+
+		msg := "Done!"
 		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 			Content: &msg,
 		})
