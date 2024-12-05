@@ -3,11 +3,8 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/tmc/langchaingo/embeddings"
@@ -15,15 +12,18 @@ import (
 	"github.com/tmc/langchaingo/llms/googleai"
 	"github.com/tmc/langchaingo/vectorstores"
 	"github.com/tmc/langchaingo/vectorstores/qdrant"
+	"gopkg.in/yaml.v3"
 )
 
 type options struct {
-	CallOptions  llms.CallOptions
-	MinMsgLen    int
-	ChunkLength  int
-	ChunkOverlap int
-	SystemPrompt string
-	RagPrompt    string
+	CallOptions         llms.CallOptions
+	MinMsgLen           int
+	ChunkLength         int
+	ChunkOverlap        int
+	SystemPrompt        string
+	RagPrompt           string
+	RagRootMatchesCount int
+	RagMatchesCount     int
 }
 
 type TwinkleshineAI struct {
@@ -31,6 +31,26 @@ type TwinkleshineAI struct {
 	options options
 	Model   llms.Model
 	VDB     vectorstores.VectorStore
+}
+
+type config struct {
+	SystemPrompt string `yaml:"system_prompt"`
+	LLM          struct {
+		MaxTokens        int     `yaml:"max_tokens"`
+		Temperature      float64 `yaml:"temperature"`
+		MinMessageLength int     `yaml:"min_message_length"`
+	} `yaml:"llm"`
+	RAG struct {
+		Chunking struct {
+			Length  int `yaml:"length"`
+			Overlap int `yaml:"overlap"`
+		} `yaml:"chunking"`
+		Matches struct {
+			RootMatchesCount int `yaml:"root_matches_count"`
+			MatchesCount     int `yaml:"matches_count"`
+		} `yaml:"matches"`
+		RagPrompt string `yaml:"rag_prompt"`
+	} `yaml:"rag"`
 }
 
 func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
@@ -71,86 +91,46 @@ func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
 }
 
 func getOptions() (*options, error) {
+	configFilePathEnv, ok := os.LookupEnv("CONFIG_FILE")
+	if !ok {
+		return nil, errors.New("CONFIG_FILE not set")
+	}
+	configFilePath := strings.TrimSpace(configFilePathEnv)
+
+	configFile, err := os.ReadFile(configFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg config
+
+	err = yaml.Unmarshal([]byte(configFile), &cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	modelEnv, ok := os.LookupEnv("LLM_MODEL")
 	if !ok {
 		return nil, errors.New("LLM_MODEL not set")
 	}
 	model := strings.TrimSpace(modelEnv)
 
-	temperatureEnv, ok := os.LookupEnv("LLM_TEMPERATURE")
-	if !ok {
-		temperatureEnv = "0.6"
-	}
-	temperature, err := strconv.ParseFloat(temperatureEnv, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	maxTokensEnv, ok := os.LookupEnv("LLM_MAX_TOKENS")
-	if !ok {
-		return nil, errors.New("LLM_MAX_TOKENS not set")
-	}
-	maxTokens, err := strconv.Atoi(maxTokensEnv)
-	if err != nil {
-		return nil, err
-	}
-
 	callOptions := llms.CallOptions{
 		Model:          model,
-		Temperature:    temperature,
-		MaxTokens:      maxTokens,
+		Temperature:    cfg.LLM.Temperature,
+		MaxTokens:      cfg.LLM.MaxTokens,
 		CandidateCount: 1,
 	}
 
-	minMsgLenEnv, ok := os.LookupEnv("MIN_MESSAGE_LENGTH")
-	if !ok {
-		log.Print("MIN_MESSAGE_LENGTH not set, using default value 20")
-		minMsgLenEnv = "20"
-	}
-	minMsgLen, err := strconv.Atoi(minMsgLenEnv)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing MIN_MESSAGE_LENGTH: %v", err)
-	}
-
-	chunkLenEnv, ok := os.LookupEnv("CHUNK_LENGTH")
-	if !ok {
-		log.Println("CHUNK_LENGTH not set, using default value 1000")
-		chunkLenEnv = "1000"
-	}
-	chunkLen, err := strconv.Atoi(chunkLenEnv)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing CHUNK_LENGTH: %v", err)
-	}
-
-	chunkOverlapEnv, ok := os.LookupEnv("CHUNK_OVERLAP")
-	if !ok {
-		log.Println("CHUNK_OVERLAP not set, using default value 100")
-		chunkOverlapEnv = "100"
-	}
-	chunkOverlap, err := strconv.Atoi(chunkOverlapEnv)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing CHUNK_OVERLAP: %v", err)
-	}
-
-	systemPromptEnv, ok := os.LookupEnv("SYSTEM_PROMPT")
-	if !ok {
-		return nil, errors.New("SYSTEM_PROMPT not set")
-	}
-	systemPrompt := strings.ReplaceAll(strings.TrimSpace(systemPromptEnv), "\\n", "\n")
-
-	ragPromptEnv, ok := os.LookupEnv("RAG_PROMPT")
-	if !ok {
-		return nil, errors.New("RAG_PROMPT not set")
-	}
-	ragPrompt := strings.ReplaceAll(strings.TrimSpace(ragPromptEnv), "\\n", "\n")
-
 	options := &options{
-		CallOptions:  callOptions,
-		MinMsgLen:    minMsgLen,
-		ChunkLength:  chunkLen,
-		ChunkOverlap: chunkOverlap,
-		SystemPrompt: systemPrompt,
-		RagPrompt:    ragPrompt,
+		CallOptions:         callOptions,
+		MinMsgLen:           cfg.LLM.MinMessageLength,
+		ChunkLength:         cfg.RAG.Chunking.Length,
+		ChunkOverlap:        cfg.RAG.Chunking.Overlap,
+		SystemPrompt:        cfg.SystemPrompt,
+		RagPrompt:           cfg.RAG.RagPrompt,
+		RagRootMatchesCount: cfg.RAG.Matches.RootMatchesCount,
+		RagMatchesCount:     cfg.RAG.Matches.MatchesCount,
 	}
 
 	return options, nil

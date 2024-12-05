@@ -7,6 +7,7 @@ require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/joho/godotenv v1.5.1
 	github.com/tmc/langchaingo v0.1.12
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

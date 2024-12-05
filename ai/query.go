@@ -4,13 +4,51 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/vectorstores"
 )
 
+/*
+Retrieval process explained:
+1. Fetch the root matches from the vector database.
+2. Extract the sources from the root matches.
+3. Fetch the matches only from the sources.
+*/
 func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
-	matches, err := a.VDB.SimilaritySearch(a.ctx, text, 10)
+	rootMatches, err := a.VDB.SimilaritySearch(a.ctx, text, a.options.RagRootMatchesCount)
+	if err != nil {
+		return "", err
+	}
+
+	if len(rootMatches) <= 0 {
+		return "", errors.New("no root matches found")
+	}
+
+	var sources []string
+	for _, match := range rootMatches {
+		if rootMatch, ok := match.Metadata["file"].(map[string]any); ok {
+			if source, ok := rootMatch["name"].(string); ok {
+				if !slices.Contains(sources, source) {
+					sources = append(sources, source)
+				}
+			}
+		}
+	}
+
+	// FIXME: This filter is qdrant-specific.
+	filter := map[string]any{
+		"must": map[string]any{
+			"key": "file.name",
+			"match": map[string]any{
+				"any": sources,
+			},
+		},
+	}
+
+	matches, err := a.VDB.SimilaritySearch(a.ctx, text, a.options.RagMatchesCount, vectorstores.WithFilters(filter))
 	if err != nil {
 		return "", err
 	}
@@ -75,8 +113,6 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 	}
 
 	response := rsp.Choices[0].Content
-
-	log.Println("Generated response:", response)
 
 	return response, nil
 }
