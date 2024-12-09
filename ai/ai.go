@@ -36,7 +36,8 @@ type Config struct {
 		MinMessageLength int     `yaml:"min_message_length"`
 	} `yaml:"llm"`
 	RAG struct {
-		Chunking struct {
+		ParseTimeoutSeconds int `yaml:"parse_timeout_seconds"`
+		Chunking            struct {
 			Length  int `yaml:"length"`
 			Overlap int `yaml:"overlap"`
 		} `yaml:"chunking"`

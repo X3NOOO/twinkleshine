@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -20,6 +21,14 @@ func rememberFile(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 	fileOption := options[0].Options[0]
 	attachment := i.ApplicationCommandData().Resolved.Attachments[fileOption.Value.(string)]
 
+	exists, err := ai.Exists("file.name", []any{attachment.Filename})
+	if err != nil {
+		return fmt.Errorf("failed to check if file exists: %v", err)
+	}
+	if exists {
+		return fmt.Errorf("file %s already exists", attachment.Filename)
+	}
+
 	resp, err := http.Get(attachment.URL)
 	if err != nil {
 		return fmt.Errorf("failed to download file: %v", err)
@@ -31,11 +40,26 @@ func rememberFile(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 		return fmt.Errorf("failed to read file content: %v", err)
 	}
 
+	hasher := sha256.New()
+	_, err = hasher.Write(content)
+	if err != nil {
+		return fmt.Errorf("failed to hash file content: %v", err)
+	}
+	hash := fmt.Sprintf("%x", hasher.Sum(nil))
+	exists, err = ai.Exists("hash", []any{hash})
+	if err != nil {
+		return fmt.Errorf("failed to check if hash exists: %v", err)
+	}
+	if exists {
+		return fmt.Errorf("file %s (with hash %s) already exists", attachment.Filename, hash)
+	}
+
 	messageLink := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID)
 	err = ai.RememberFile(content, map[string]any{
 		"file": map[string]any{
 			"name": attachment.Filename,
 			"url":  messageLink,
+			"hash": hash,
 		},
 	})
 	if err != nil {
@@ -69,6 +93,18 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 
 	for _, url := range urlList {
 		go func(url string) {
+			log.Println("Processing URL:", url)
+
+			exists, err := ai.Exists("file.url", []any{url})
+			if err != nil {
+				err = fmt.Errorf("failed to check if URL exists: %v", err)
+				errs <- err
+			}
+			if exists {
+				err = fmt.Errorf("URL %s already exists", url)
+				errs <- err
+			}
+
 			resp, err := http.Get(url)
 			if err != nil {
 				err = fmt.Errorf("failed to download URL: %v", err)
@@ -81,6 +117,23 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 				errs <- err
 			}
 
+			hasher := sha256.New()
+			_, err = hasher.Write(content)
+			if err != nil {
+				err = fmt.Errorf("failed to hash URL content: %v", err)
+				errs <- err
+			}
+			hash := fmt.Sprintf("%x", hasher.Sum(nil))
+			exists, err = ai.Exists("hash", []any{hash})
+			if err != nil {
+				err = fmt.Errorf("failed to check if hash exists: %v", err)
+				errs <- err
+			}
+			if exists {
+				err = fmt.Errorf("URL %s (with hash %s) already exists", url, hash)
+				errs <- err
+			}
+
 			doc, err := html.Parse(strings.NewReader(string(content)))
 			if err != nil {
 				err = fmt.Errorf("failed to parse HTML: %v", err)
@@ -88,9 +141,9 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 			}
 
 			var title string
-			maxDepth := 100
-			var getTitle func(*html.Node, int)
-			getTitle = func(n *html.Node, depth int) {
+			var maxDepth uint8 = 0xff
+			var getTitle func(*html.Node, uint8)
+			getTitle = func(n *html.Node, depth uint8) {
 				if depth > maxDepth || n == nil {
 					return
 				}
@@ -117,6 +170,7 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 				"file": map[string]any{
 					"name": title,
 					"url":  url,
+					"hash": hash,
 				},
 			})
 			if err != nil {
@@ -136,7 +190,7 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 	}
 
 	if len(failedUploads) > 0 {
-		msg := "Some URLs failed to upload:\n" + strings.Join(failedUploads, "\n")
+		msg := "Some URLs failed to upload:\n" + strings.Join(failedUploads, "\n") + "\n\nThe rest of the URLs were uploaded successfully."
 		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
@@ -174,10 +228,9 @@ func (c *CommandContext) RememberCLIHandler(s *discordgo.Session, i *discordgo.I
 
 func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Uploading...",
-			Flags:   discordgo.MessageFlagsEphemeral,
+			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
 	if err != nil {
@@ -211,6 +264,18 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 		go func(att *discordgo.MessageAttachment) {
 			log.Println("Processing attachment:", att.Filename)
 
+			exists, err := c.AI.Exists("file.name", []any{att.Filename})
+			if err != nil {
+				err = fmt.Errorf("failed to check if %s exists: %v", att.Filename, err)
+				errs <- err
+				return
+			}
+			if exists {
+				err = fmt.Errorf("file %s already exists", att.Filename)
+				errs <- err
+				return
+			}
+
 			resp, err := http.Get(att.URL)
 			if err != nil {
 				log.Printf("Failed to download %s: %v\n", att.Filename, err)
@@ -226,11 +291,33 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 				return
 			}
 
+			hasher := sha256.New()
+			hasher.Write(data)
+			_, err = hasher.Write(data)
+			if err != nil {
+				log.Printf("Failed to hash data %s: %v\n", att.Filename, err)
+				errs <- fmt.Errorf("failed to hash data %s: %v", att.Filename, err)
+				return
+			}
+			hash := fmt.Sprintf("%x", hasher.Sum(nil))
+			exists, err = c.AI.Exists("hash", []any{hash})
+			if err != nil {
+				log.Printf("Failed to check if hash %s exists: %v\n", hash, err)
+				errs <- fmt.Errorf("failed to check if hash %s exists: %v", hash, err)
+				return
+			}
+			if exists {
+				err = fmt.Errorf("file %s (with hash %s) already exists", att.Filename, hash)
+				errs <- err
+				return
+			}
+
 			messageLink := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID)
 			err = c.AI.RememberFile(data, map[string]any{
 				"file": map[string]any{
 					"name": att.Filename,
 					"url":  messageLink,
+					"hash": hash,
 				},
 			})
 			if err != nil {
@@ -252,9 +339,9 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 	}
 
 	if len(failedUploads) > 0 {
-		msg := "Some attachments failed to upload:\n" + strings.Join(failedUploads, "\n")
+		msg := "Some attachments failed to upload:\n" + strings.Join(failedUploads, "\n") + "\n\nThe rest of the attachments were uploaded successfully."
 		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
-	return utils.SendSuccessEmbed("Message attachmertergft", true, s, i)
+	return utils.SendSuccessEmbed("All attachments uploaded successfully!", true, s, i)
 }
