@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/X3NOOO/twinkleshine/discord"
+
 	"github.com/joho/godotenv"
 )
 
@@ -31,7 +33,7 @@ func main() {
 
 	_ = godotenv.Load(envFlag)
 
-	bot, err := NewBot(os.Getenv("DISCORD_TOKEN"))
+	bot, err := discord.NewBot(os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
 		log.Fatalf("Cannot create the bot: %v\n", err)
 	}

@@ -1,9 +1,10 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/X3NOOO/twinkleshine/commands/utils"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -61,15 +62,7 @@ func (c *CommandContext) AskCLIHandler(s *discordgo.Session, i *discordgo.Intera
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
-		err = fmt.Errorf("failed to process the text: %v", err)
-		_, derr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: msg,
-		})
-		if derr != nil {
-			return fmt.Errorf("failed to send error (%v) response: %v", err, derr)
-		}
-
-		return err
+		return utils.SendErrorEmbed(msg, s, i)
 	}
 
 	return sendChunked(s, i, reply)
@@ -88,15 +81,7 @@ func (c *CommandContext) AskGUIHandler(s *discordgo.Session, i *discordgo.Intera
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
-		err = fmt.Errorf("failed to process the text: %v", err)
-		_, derr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: msg,
-		})
-		if derr != nil {
-			return fmt.Errorf("failed to send error (%v) response: %v", err, derr)
-		}
-
-		return err
+		return utils.SendErrorEmbed(msg, s, i)
 	}
 
 	return sendChunked(s, i, reply)

@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"github.com/X3NOOO/twinkleshine/commands/utils"
+
 	"github.com/X3NOOO/twinkleshine/ai"
 	"github.com/bwmarrin/discordgo"
 )
@@ -17,7 +19,12 @@ type CommandContext struct {
 	AI ai.TwinkleshineAI
 }
 
-func (c *CommandContext) GetCommands() []Command {
+func (c *CommandContext) GetCommands(staffRole string, slowmodeSeconds int64) []Command {
+	security := utils.Security{
+		StaffRoleID:     staffRole,
+		SlowmodeSeconds: slowmodeSeconds,
+	}
+
 	return []Command{
 		{
 			Name:        "about",
@@ -27,7 +34,7 @@ func (c *CommandContext) GetCommands() []Command {
 		{
 			Name:        "ask",
 			Description: "Ask a question",
-			Handler:     c.AskCLIHandler,
+			Handler:     security.Timeout(c.AskCLIHandler),
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "question",
@@ -40,17 +47,17 @@ func (c *CommandContext) GetCommands() []Command {
 		{
 			Name:    "Respond to the question",
 			Type:    discordgo.MessageApplicationCommand,
-			Handler: c.AskGUIHandler,
+			Handler: security.Timeout(c.AskGUIHandler),
 		},
 		{
 			Name:    "Add to the persistent knowledge",
 			Type:    discordgo.MessageApplicationCommand,
-			Handler: c.RememberGUIHandler,
+			Handler: security.Guard(c.RememberGUIHandler),
 		},
 		{
 			Name:        "remember",
 			Description: "Add to the persistent knowledge",
-			Handler:     c.RememberCLIHandler,
+			Handler:     security.Guard(c.RememberCLIHandler),
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "file",

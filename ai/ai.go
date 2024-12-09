@@ -15,27 +15,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type options struct {
-	CallOptions         llms.CallOptions
-	MinMsgLen           int
-	ChunkLength         int
-	ChunkOverlap        int
-	SystemPrompt        string
-	RagPrompt           string
-	RagRootMatchesCount int
-	RagMatchesCount     int
-}
-
 type TwinkleshineAI struct {
 	ctx     context.Context
-	options options
+	Options options
 	Model   llms.Model
 	VDB     vectorstores.VectorStore
 }
 
-type config struct {
+type Config struct {
 	SystemPrompt string `yaml:"system_prompt"`
-	LLM          struct {
+	Discord      struct {
+		Security struct {
+			StaffRoleID     string `yaml:"staff_role_id"`
+			CooldownSeconds int64  `yaml:"cooldown_seconds"`
+		} `yaml:"security"`
+	} `yaml:"discord"`
+	LLM struct {
 		MaxTokens        int     `yaml:"max_tokens"`
 		Temperature      float64 `yaml:"temperature"`
 		MinMessageLength int     `yaml:"min_message_length"`
@@ -46,11 +41,16 @@ type config struct {
 			Overlap int `yaml:"overlap"`
 		} `yaml:"chunking"`
 		Matches struct {
-			RootMatchesCount int `yaml:"root_matches_count"`
-			MatchesCount     int `yaml:"matches_count"`
+			RootCount int `yaml:"root_count"`
+			Count     int `yaml:"count"`
 		} `yaml:"matches"`
 		RagPrompt string `yaml:"rag_prompt"`
 	} `yaml:"rag"`
+}
+
+type options struct {
+	CallOptions llms.CallOptions
+	Config      Config
 }
 
 func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
@@ -102,7 +102,7 @@ func getOptions() (*options, error) {
 		return nil, err
 	}
 
-	var cfg config
+	var cfg Config
 
 	err = yaml.Unmarshal([]byte(configFile), &cfg)
 	if err != nil {
@@ -123,14 +123,8 @@ func getOptions() (*options, error) {
 	}
 
 	options := &options{
-		CallOptions:         callOptions,
-		MinMsgLen:           cfg.LLM.MinMessageLength,
-		ChunkLength:         cfg.RAG.Chunking.Length,
-		ChunkOverlap:        cfg.RAG.Chunking.Overlap,
-		SystemPrompt:        cfg.SystemPrompt,
-		RagPrompt:           cfg.RAG.RagPrompt,
-		RagRootMatchesCount: cfg.RAG.Matches.RootMatchesCount,
-		RagMatchesCount:     cfg.RAG.Matches.MatchesCount,
+		CallOptions: callOptions,
+		Config:      cfg,
 	}
 
 	return options, nil
@@ -196,7 +190,7 @@ func NewAI() (*TwinkleshineAI, error) {
 	return &TwinkleshineAI{
 		ctx:     ctx,
 		Model:   llm,
-		options: *options,
+		Options: *options,
 		VDB:     *vdb,
 	}, nil
 }

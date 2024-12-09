@@ -3,6 +3,11 @@ system_prompt: |
   Odpowiadaj na pytania zwięźle, lecz dokładnie.
   Jeżeli nie znasz odpowiedzi na pytanie, poinformuj o tym użytkownika. Nie halucynuj.
 
+discord:
+  security:
+    staff_role_id: [PLACEHOLDER]
+    cooldown_seconds: 60
+
 llm:
   max_tokens: 1024
   temperature: 0.6
@@ -13,8 +18,8 @@ rag:
     length: 2048
     overlap: 256
   matches:
-    root_matches_count: 30
-    matches_count: 15
+    root_count: 30
+    count: 15
   rag_prompt: |
     Możesz użyć poniższych informacji.
     Jeżeli zdecydujesz się na użycie danej informacji podaj jej źródło pod sam koniec wypowiedzi w formacie "Opis źródła: [Filename](URL)". Źródła powinny być opisane, by użytkownik wiedział za co odpowiadają.

@@ -62,7 +62,7 @@ func (a *TwinkleshineAI) Remember(text string, metadata map[string]any) error {
 }
 
 func (a *TwinkleshineAI) RememberFile(body []byte, metadata map[string]any) error {
-	chunks, err := parseFile(body, a.options.ChunkLength, a.options.ChunkOverlap)
+	chunks, err := parseFile(body, a.Options.Config.RAG.Chunking.Length, a.Options.Config.RAG.Chunking.Overlap)
 	if err != nil {
 		return err
 	}

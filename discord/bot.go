@@ -1,4 +1,4 @@
-package main
+package discord
 
 import (
 	"log"
@@ -129,7 +129,10 @@ func NewBot(token string) (*bot, error) {
 		AI: *ai,
 	}
 
-	commands := ctx.GetCommands()
+	commands := ctx.GetCommands(
+		ai.Options.Config.Discord.Security.StaffRoleID,
+		ai.Options.Config.Discord.Security.CooldownSeconds,
+	)
 
 	bot := &bot{
 		s:        session,

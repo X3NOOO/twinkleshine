@@ -18,7 +18,7 @@ Retrieval process explained:
 3. Fetch the matches only from the sources.
 */
 func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
-	rootMatches, err := a.VDB.SimilaritySearch(a.ctx, text, a.options.RagRootMatchesCount)
+	rootMatches, err := a.VDB.SimilaritySearch(a.ctx, text, a.Options.Config.RAG.Matches.RootCount)
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +48,7 @@ func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
 		},
 	}
 
-	matches, err := a.VDB.SimilaritySearch(a.ctx, text, a.options.RagMatchesCount, vectorstores.WithFilters(filter))
+	matches, err := a.VDB.SimilaritySearch(a.ctx, text, a.Options.Config.RAG.Matches.Count, vectorstores.WithFilters(filter))
 	if err != nil {
 		return "", err
 	}
@@ -75,7 +75,7 @@ func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
 }
 
 func (a *TwinkleshineAI) Query(text string) (string, error) {
-	if len(text) <= a.options.MinMsgLen {
+	if len(text) <= a.Options.Config.LLM.MinMessageLength {
 		return "", errors.New("message is too short")
 	}
 
@@ -94,8 +94,8 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 			{
 				Role: llms.ChatMessageTypeSystem,
 				Parts: []llms.ContentPart{
-					llms.TextPart(a.options.SystemPrompt),
-					llms.TextPart(strings.ReplaceAll(a.options.RagPrompt, "{RAG_KNOWLEDGE}", knowledge)),
+					llms.TextPart(a.Options.Config.SystemPrompt),
+					llms.TextPart(strings.ReplaceAll(a.Options.Config.RAG.RagPrompt, "{RAG_KNOWLEDGE}", knowledge)),
 				},
 			},
 			{
@@ -105,7 +105,7 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 				},
 			},
 		},
-		llms.WithOptions(a.options.CallOptions),
+		llms.WithOptions(a.Options.CallOptions),
 	)
 	if err != nil {
 		err = fmt.Errorf("cannot generate response: %v", err)
