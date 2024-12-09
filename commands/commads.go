@@ -71,7 +71,8 @@ func (c *CommandContext) GetCommands(staffRole string, slowmodeSeconds int64) []
 							Required:    true,
 						},
 					},
-				}, {
+				},
+				{
 					Name:        "text",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Description: "Upload text to remember",
@@ -79,6 +80,19 @@ func (c *CommandContext) GetCommands(staffRole string, slowmodeSeconds int64) []
 						{
 							Name:        "text",
 							Description: "Text to remember",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+					},
+				},
+				{
+					Name:        "urls",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Description: "Upload websites to remember",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "urls",
+							Description: "Space separated URLs to remember",
 							Type:        discordgo.ApplicationCommandOptionString,
 							Required:    true,
 						},

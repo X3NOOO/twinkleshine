@@ -62,7 +62,7 @@ func (c *CommandContext) AskCLIHandler(s *discordgo.Session, i *discordgo.Intera
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
-		return utils.SendErrorEmbed(msg, s, i)
+		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
 	return sendChunked(s, i, reply)
@@ -81,7 +81,7 @@ func (c *CommandContext) AskGUIHandler(s *discordgo.Session, i *discordgo.Intera
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
-		return utils.SendErrorEmbed(msg, s, i)
+		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
 	return sendChunked(s, i, reply)

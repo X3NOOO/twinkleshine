@@ -1,9 +1,10 @@
 package ai
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/X3NOOO/llamaparse-go"
 	"github.com/tmc/langchaingo/schema"
@@ -18,12 +19,14 @@ type Chunk struct {
 func parse(body []byte) (string, error) {
 	mime := http.DetectContentType(body)
 
+	mime = strings.Split(mime, ";")[0]
+
 	if mime == "text/plain" {
 		return string(body), nil
 	} else if slices.Contains(llamaparse.SUPPORTED_MIME_TYPES, mime) {
 		return llamaparse.Parse(body, llamaparse.MARKDOWN, nil, nil, nil, nil)
 	} else {
-		return "", errors.New("unsupported filetype")
+		return "", fmt.Errorf("unsupported MIME type: %s", mime)
 	}
 }
 
