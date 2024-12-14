@@ -18,6 +18,7 @@ Retrieval process explained:
 3. Fetch the matches only from the sources.
 */
 func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
+	a.log.Println("Fetching knowledge for:", text)
 	rootMatches, err := a.VDB.SimilaritySearch(a.ctx, text, a.Options.Config.RAG.Matches.RootCount)
 	if err != nil {
 		return "", err
@@ -26,6 +27,8 @@ func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
 	if len(rootMatches) <= 0 {
 		return "", errors.New("no root matches found")
 	}
+
+	a.log.Printf("Found %d root matches\n", len(rootMatches))
 
 	var sources []string
 	for _, match := range rootMatches {
@@ -59,6 +62,8 @@ func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
 		return "", errors.New("no matches found")
 	}
 
+	a.log.Printf("Found %d matches\n", len(matches))
+
 	var parsedKnowledge string
 	for i, match := range matches {
 		parsedMatch := fmt.Sprintf("Source %d.\nText: %s\n", i+1, match.PageContent)
@@ -80,6 +85,8 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 	if len(text) <= a.Options.Config.LLM.MinMessageLength {
 		return "", errors.New("message is too short")
 	}
+
+	a.log.Println("Got question:", text)
 
 	knowledge, err := a.fetchKnowledge(text)
 	if err != nil {
@@ -115,6 +122,8 @@ func (a *TwinkleshineAI) Query(text string) (string, error) {
 	}
 
 	response := rsp.Choices[0].Content
+
+	a.log.Println("Generated response:", response)
 
 	return response, nil
 }

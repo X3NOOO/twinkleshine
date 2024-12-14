@@ -52,6 +52,7 @@ func parseFile(body []byte, timeout int, chunkLength int, chunkOverlap int) ([]s
 }
 
 func (a *TwinkleshineAI) Exists(key string, values []any) (bool, error) {
+	a.log.Println("Checking if", key, "exists in", values)
 	filter := map[string]any{
 		"must": map[string]any{
 			"key":   key,
@@ -68,6 +69,7 @@ func (a *TwinkleshineAI) Exists(key string, values []any) (bool, error) {
 }
 
 func (a *TwinkleshineAI) Remember(text string, metadata map[string]any) error {
+	a.log.Println("Remembering:", text)
 	_, err := a.VDB.AddDocuments(
 		a.ctx,
 		[]schema.Document{
@@ -82,6 +84,7 @@ func (a *TwinkleshineAI) Remember(text string, metadata map[string]any) error {
 }
 
 func (a *TwinkleshineAI) RememberFile(body []byte, metadata map[string]any) error {
+	a.log.Println("Remembering file:", metadata)
 	chunks, err := parseFile(body, a.Options.Config.RAG.ParseTimeoutSeconds, a.Options.Config.RAG.Chunking.Length, a.Options.Config.RAG.Chunking.Overlap)
 	if err != nil {
 		return err

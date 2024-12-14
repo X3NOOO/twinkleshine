@@ -1,8 +1,12 @@
 package utils
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"strings"
 
-func ParseReplies(s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
+	"github.com/bwmarrin/discordgo"
+)
+
+func ParseReplies(s *discordgo.Session, m *discordgo.Message) (string, error) {
 	fullMsg := m.Author.Username + ": \"" + m.Content + "\""
 	currentM, err := s.ChannelMessage(m.ChannelID, m.ID)
 	if err != nil {
@@ -17,6 +21,8 @@ func ParseReplies(s *discordgo.Session, m *discordgo.MessageCreate) (string, err
 			break
 		}
 	}
+
+	fullMsg = strings.TrimSpace(fullMsg)
 
 	return fullMsg, nil
 }

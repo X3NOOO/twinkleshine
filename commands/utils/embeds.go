@@ -8,7 +8,7 @@ import (
 )
 
 func SendErrorEmbed(msg string, edit bool, s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	log.Println(msg)
+	log.Printf("Sending error embed to %s [%s]: %s\n", i.Interaction.Member.User.Username, i.Interaction.Member.User.ID, msg)
 
 	if edit {
 		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
@@ -52,7 +52,7 @@ func SendErrorEmbed(msg string, edit bool, s *discordgo.Session, i *discordgo.In
 }
 
 func SendSuccessEmbed(msg string, edit bool, s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	log.Println(msg)
+	log.Printf("Sending success embed to %s [%s]: %s\n", i.Interaction.Member.User.Username, i.Interaction.Member.User.ID, msg)
 
 	if edit {
 		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{

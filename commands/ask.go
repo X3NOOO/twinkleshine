@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -57,14 +59,20 @@ func (c *CommandContext) AskCLIHandler(s *discordgo.Session, i *discordgo.Intera
 		return err
 	}
 
+	logger_prefix := fmt.Sprintf("[AskCLIHandler] %s [%s] ", i.Member.User.Username, i.Member.User.ID)
+	log := log.New(log.Writer(), logger_prefix, log.Flags())
+
 	text := i.ApplicationCommandData().Options[0].StringValue()
+	log.Println("Received question: " + text)
 
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
+		log.Println(msg)
 		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
+	log.Println("Question answered successfully")
 	return sendChunked(s, i, reply)
 }
 
@@ -76,13 +84,19 @@ func (c *CommandContext) AskGUIHandler(s *discordgo.Session, i *discordgo.Intera
 		return err
 	}
 
+	logger_prefix := fmt.Sprintf("[AskGUIHandler] %s [%s] ", i.Member.User.Username, i.Member.User.ID)
+	log := log.New(log.Writer(), logger_prefix, log.Flags())
+
 	text := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID].Content
+	log.Println("Received question: " + text)
 
 	reply, err := c.AI.Query(text)
 	if err != nil {
 		msg := "Failed to process the text: " + err.Error()
+		log.Println(msg)
 		return utils.SendErrorEmbed(msg, true, s, i)
 	}
 
+	log.Println("Question answered successfully")
 	return sendChunked(s, i, reply)
 }

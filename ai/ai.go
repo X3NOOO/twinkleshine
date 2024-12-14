@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -20,6 +21,7 @@ type TwinkleshineAI struct {
 	Options options
 	Model   llms.Model
 	VDB     vectorstores.VectorStore
+	log     *log.Logger
 }
 
 type Config struct {
@@ -194,5 +196,6 @@ func NewAI() (*TwinkleshineAI, error) {
 		Model:   llm,
 		Options: *options,
 		VDB:     *vdb,
+		log:     log.New(log.Writer(), "[AI] ", log.Flags()),
 	}, nil
 }

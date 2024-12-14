@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"log"
 
 	"github.com/X3NOOO/twinkleshine/ai"
@@ -114,10 +116,15 @@ func (b *bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 }
 
 func (b *bot) getOnMessageCreateHandler(ctx *commands.CommandContext) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	logger_prefix := "[KNOWLEDGE WATCHDOG] "
+	log := log.New(log.Writer(), logger_prefix, log.Flags())
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		if m.Author.Bot {
+			return
+		}
 		author, err := s.GuildMember(m.GuildID, m.Author.ID)
 		if err != nil {
-			log.Printf("Cannot get member: %v\n", err)
+			log.Printf("Cannot get member %s [%s]: %v\n", m.Author.Username, m.Author.ID, err)
 			return
 		}
 
@@ -132,20 +139,47 @@ func (b *bot) getOnMessageCreateHandler(ctx *commands.CommandContext) func(s *di
 			return
 		}
 
-		fullMsg, err := utils.ParseReplies(s, m)
+		msg, err := s.ChannelMessage(m.ChannelID, m.ID)
+		if err != nil {
+			log.Printf("Cannot get message: %v\n", err)
+			return
+		}
+
+		fullMsg, err := utils.ParseReplies(s, msg)
 		if err != nil {
 			log.Printf("Cannot parse replies: %v\n", err)
 			return
 		}
 
+		hasher := sha256.New()
+		_, err = hasher.Write([]byte(fullMsg))
+		if err != nil {
+			log.Printf("Cannot hash message: %v\n", err)
+			return
+		}
+		hash := fmt.Sprintf("%x", hasher.Sum(nil))
+
+		exists, err := ctx.AI.Exists("file.hash", []any{hash})
+		if err != nil {
+			log.Printf("Cannot check if message exists: %v\n", err)
+			return
+		}
+		if exists {
+			log.Println("Message already exists")
+			return
+		}
+
 		err = ctx.AI.Remember(fullMsg, map[string]interface{}{
 			"file": map[string]interface{}{
-				"name": m.Author.Username + "'s message",
-				"url":  "https://discord.com/channels/" + m.GuildID + "/" + m.ChannelID + "/" + m.ID,
+				"name":    m.Author.Username + "'s message",
+				"url":     fmt.Sprintf("https://discord.com/channels/%s/%s/%s", m.GuildID, m.ChannelID, m.ID),
+				"hash":    hash,
+				"addedBy": "knowledge watchdog",
 			},
 		})
 		if err != nil {
 			log.Printf("Cannot remember message: %v\n", err)
+			return
 		}
 
 		log.Printf("Remembered message: %s\n", fullMsg)

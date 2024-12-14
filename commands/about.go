@@ -1,12 +1,16 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 func (c *CommandContext) AboutHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	logger_prefix := fmt.Sprintf("[ABOUT] %s [%s] ", i.Member.User.Username, i.Member.User.ID)
+	log := log.New(log.Writer(), logger_prefix, log.Flags())
+	log.Println("About command is called")
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -33,6 +37,8 @@ func (c *CommandContext) AboutHandler(s *discordgo.Session, i *discordgo.Interac
 	if err != nil {
 		log.Printf("Cannot respond to interaction: %v\n", err)
 	}
+
+	log.Println("About command is done")
 
 	return err
 }

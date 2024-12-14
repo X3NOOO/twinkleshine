@@ -61,9 +61,9 @@ func (sc *Security) Guard(handler func(s *discordgo.Session, i *discordgo.Intera
 			}
 		}
 
-		SendErrorEmbed("You are not authorized to use this command", true, s, i)
+		SendErrorEmbed("You are not authorized to use this command", false, s, i)
 
-		return fmt.Errorf("user %s tried to use a privileged command", i.Member.User.ID)
+		return fmt.Errorf("user %s [%s] tried to use a privileged command", i.Member.User.Username, i.Member.User.ID)
 	}
 }
 
@@ -73,9 +73,9 @@ func (sc *Security) Timeout(handler func(s *discordgo.Session, i *discordgo.Inte
 		if cooldown != nil {
 			if cooldown.Time+sc.SlowmodeSeconds > time.Now().Unix() {
 				msg := fmt.Sprintf("Please wait %d seconds before using this command again", cooldown.Time+sc.SlowmodeSeconds-time.Now().Unix())
-				SendErrorEmbed(msg, true, s, i)
+				SendErrorEmbed(msg, false, s, i)
 
-				return fmt.Errorf("%s's cooldown has not expired", i.Member.User.ID)
+				return fmt.Errorf("%s's [%s] cooldown has not expired", i.Member.User.Username, i.Member.User.ID)
 			}
 		}
 
