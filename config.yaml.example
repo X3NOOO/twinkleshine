@@ -7,6 +7,7 @@ discord:
   security:
     staff_role_id: [PLACEHOLDER]
     cooldown_seconds: 60
+  learn_messages_role_id: [PLACEHOLDER]
 
 llm:
   max_tokens: 1024
@@ -19,7 +20,7 @@ rag:
     length: 2048
     overlap: 256
   matches:
-    root_count: 30
+    root_count: 50
     count: 15
   rag_prompt: |
     Możesz użyć poniższych informacji.

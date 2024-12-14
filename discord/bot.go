@@ -5,6 +5,7 @@ import (
 
 	"github.com/X3NOOO/twinkleshine/ai"
 	"github.com/X3NOOO/twinkleshine/commands"
+	"github.com/X3NOOO/twinkleshine/commands/utils"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -112,6 +113,45 @@ func (b *bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 	}
 }
 
+func (b *bot) getOnMessageCreateHandler(ctx *commands.CommandContext) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		author, err := s.GuildMember(m.GuildID, m.Author.ID)
+		if err != nil {
+			log.Printf("Cannot get member: %v\n", err)
+			return
+		}
+
+		hasRole := false
+		for _, roleID := range author.Roles {
+			if roleID == ctx.AI.Options.Config.Discord.LearnMessagesRoleID {
+				hasRole = true
+				break
+			}
+		}
+		if !hasRole {
+			return
+		}
+
+		fullMsg, err := utils.ParseReplies(s, m)
+		if err != nil {
+			log.Printf("Cannot parse replies: %v\n", err)
+			return
+		}
+
+		err = ctx.AI.Remember(fullMsg, map[string]interface{}{
+			"file": map[string]interface{}{
+				"name": m.Author.Username + "'s message",
+				"url":  "https://discord.com/channels/" + m.GuildID + "/" + m.ChannelID + "/" + m.ID,
+			},
+		})
+		if err != nil {
+			log.Printf("Cannot remember message: %v\n", err)
+		}
+
+		log.Printf("Remembered message: %s\n", fullMsg)
+	}
+}
+
 func NewBot(token string) (*bot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
@@ -139,8 +179,11 @@ func NewBot(token string) (*bot, error) {
 		commands: commands,
 	}
 
+	onMessageCreate := bot.getOnMessageCreateHandler(ctx)
+
 	bot.s.AddHandler(bot.onReady)
 	bot.s.AddHandler(bot.onInteractionCreate)
+	bot.s.AddHandler(onMessageCreate)
 
 	return bot, nil
 }

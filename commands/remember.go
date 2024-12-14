@@ -246,7 +246,7 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 
 		err = c.AI.Remember(messageContent, map[string]any{
 			"file": map[string]any{
-				"name": "Message",
+				"name": "'s message",
 				"url":  fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID),
 			},
 		})

@@ -48,6 +48,8 @@ func (a *TwinkleshineAI) fetchKnowledge(text string) (string, error) {
 		},
 	}
 
+	// TODO: Only fetch a certain number of matches from each source.
+
 	matches, err := a.VDB.SimilaritySearch(a.ctx, text, a.Options.Config.RAG.Matches.Count, vectorstores.WithFilters(filter))
 	if err != nil {
 		return "", err

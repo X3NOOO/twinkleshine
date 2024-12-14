@@ -29,6 +29,7 @@ type Config struct {
 			StaffRoleID     string `yaml:"staff_role_id"`
 			CooldownSeconds int64  `yaml:"cooldown_seconds"`
 		} `yaml:"security"`
+		LearnMessagesRoleID string `yaml:"learn_messages_role_id"`
 	} `yaml:"discord"`
 	LLM struct {
 		MaxTokens        int     `yaml:"max_tokens"`
