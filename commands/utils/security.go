@@ -69,6 +69,17 @@ func (sc *Security) Guard(handler func(s *discordgo.Session, i *discordgo.Intera
 
 func (sc *Security) Timeout(handler func(s *discordgo.Session, i *discordgo.InteractionCreate) error) func(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	return func(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+		member, err := s.GuildMember(i.GuildID, i.Member.User.ID)
+		if err != nil {
+			return err
+		}
+
+		for _, role := range member.Roles {
+			if role == sc.StaffRoleID {
+				return handler(s, i)
+			}
+		}
+
 		cooldown := sc.GetCooldown(i.Member.User.ID)
 		if cooldown != nil {
 			if cooldown.Time+sc.SlowmodeSeconds > time.Now().Unix() {

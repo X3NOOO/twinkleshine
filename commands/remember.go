@@ -250,6 +250,137 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 	return utils.SendSuccessEmbed("All URLs remembered successfully!", true, s, i)
 }
 
+func rememberChannel(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.TwinkleshineAI, log *log.Logger) error {
+	options := i.ApplicationCommandData().Options
+	channelID := options[0].Options[0].ChannelValue(s).ID
+	log.Println("Processing channel:", channelID)
+
+	allMessages, err := s.ChannelMessages(channelID, 100, "", "", "")
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get channel messages: %v", err)
+		log.Println(msg)
+		return utils.SendErrorEmbed(msg, true, s, i)
+	}
+
+	for {
+		messages, err := s.ChannelMessages(channelID, 100, allMessages[len(allMessages)-1].ID, "", "")
+		if err != nil {
+			msg := fmt.Sprintf("Failed to get more channel messages: %v", err)
+			log.Println(msg)
+			break
+		}
+		if len(messages) == 0 {
+			break
+		}
+		allMessages = append(allMessages, messages...)
+	}
+
+	log.Printf("Found %d messages\n", len(allMessages))
+
+	var allAttachements []*discordgo.MessageAttachment
+	for _, msg := range allMessages {
+		attachments := msg.Attachments
+		if len(attachments) <= 0 {
+			continue
+		}
+
+		allAttachements = append(allAttachements, attachments...)
+	}
+
+	log.Printf("Found %d attachments\n", len(allAttachements))
+
+	errs := make(chan error, len(allAttachements))
+	for _, att := range allAttachements {
+		go func(att *discordgo.MessageAttachment) {
+			log.Println("Processing attachment:", att.Filename)
+
+			exists, err := ai.Exists("file.name", []any{att.Filename})
+			if err != nil {
+				err = fmt.Errorf("failed to check if %s exists: %v", att.Filename, err)
+				errs <- err
+				return
+			}
+			if exists {
+				err = fmt.Errorf("file %s already exists", att.Filename)
+				errs <- err
+				return
+			}
+
+			resp, err := http.Get(att.URL)
+			if err != nil {
+				log.Printf("Failed to download %s: %v\n", att.Filename, err)
+				errs <- fmt.Errorf("failed to download %s: %v", att.Filename, err)
+				return
+			}
+			defer resp.Body.Close()
+
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("Failed to read data %s: %v\n", att.Filename, err)
+				errs <- fmt.Errorf("failed to read data %s: %v", att.Filename, err)
+				return
+			}
+
+			hasher := sha256.New()
+			hasher.Write(data)
+			_, err = hasher.Write(data)
+			if err != nil {
+				log.Printf("Failed to hash data %s: %v\n", att.Filename, err)
+				errs <- fmt.Errorf("failed to hash data %s: %v", att.Filename, err)
+				return
+			}
+			hash := fmt.Sprintf("%x", hasher.Sum(nil))
+			exists, err = ai.Exists("hash", []any{hash})
+			if err != nil {
+				log.Printf("Failed to check if hash %s exists: %v\n", hash, err)
+				errs <- fmt.Errorf("failed to check if hash %s exists: %v", hash, err)
+				return
+			}
+			if exists {
+				err = fmt.Errorf("file %s (with hash %s) already exists", att.Filename, hash)
+				errs <- err
+				return
+			}
+
+			messageLink := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", i.GuildID, i.ChannelID, i.ApplicationCommandData().TargetID)
+
+			err = ai.RememberFile(data, map[string]any{
+				"file": map[string]any{
+					"name":    att.Filename,
+					"url":     messageLink,
+					"hash":    hash,
+					"addedBy": i.Member.User.ID,
+				},
+			})
+			if err != nil {
+				log.Printf("Failed to remember file %s: %v\n", att.Filename, err)
+				errs <- fmt.Errorf("failed to remember file %s: %v", att.Filename, err)
+				return
+			}
+
+			errs <- nil
+		}(att)
+	}
+
+	var failedUploads []string
+	for i := 0; i < len(allAttachements); i++ {
+		if err := <-errs; err != nil {
+			failedUploads = append(failedUploads, err.Error())
+		}
+	}
+
+	if len(failedUploads) > 0 {
+		msg := "Some attachments failed to upload:\n" + strings.Join(failedUploads, "\n") + "\n\nThe rest of the attachments were uploaded successfully."
+		log.Println(msg)
+		return utils.SendErrorEmbed(msg, true, s, i)
+	}
+
+	log.Println("All attachments uploaded successfully!")
+
+	return utils.SendSuccessEmbed("All attachments uploaded successfully!", true, s, i)
+
+}
+
 func (c *CommandContext) RememberCLIHandler(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
@@ -274,6 +405,8 @@ func (c *CommandContext) RememberCLIHandler(s *discordgo.Session, i *discordgo.I
 		err = rememberText(s, i, c.AI, logger)
 	case "urls":
 		err = rememberUrls(s, i, c.AI, logger)
+	case "channel":
+		err = rememberChannel(s, i, c.AI, logger)
 	default:
 		msg := fmt.Sprintf("Unknown subcommand: %v", subcommand)
 		logger.Println(msg)

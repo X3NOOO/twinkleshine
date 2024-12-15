@@ -52,7 +52,6 @@ func parseFile(body []byte, timeout int, chunkLength int, chunkOverlap int) ([]s
 }
 
 func (a *TwinkleshineAI) Exists(key string, values []any) (bool, error) {
-	a.log.Println("Checking if", key, "exists in", values)
 	filter := map[string]any{
 		"must": map[string]any{
 			"key":   key,

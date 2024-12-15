@@ -34,7 +34,7 @@ rag:
     - {Opis źródła}: [{Filename źródła}]({URL źródła})"
     ```
 
-    Ważne: Nigdy nie pomijaj sekcji "Źródła" w odpowiedziach i zawsze ją wyodrębniaj. Pamiętaj, żeby zawsze podawać źródła informacji, które podajesz użytkownikowi. Jeżeli pare źródeł podaje tą samą informację, wystarczy podać jedno z nich.
+    Ważne: Nigdy nie pomijaj sekcji "Źródła" w odpowiedziach i zawsze ją wyodrębniaj. Pamiętaj, żeby zawsze podawać źródła informacji, które podajesz użytkownikowi. Jeżeli pare źródeł podaje tą samą informację, wystarczy podać jedno z nich. Jeżeli nie użyłeś żadnych źródeł, nie musisz dodawać sekcji "Źródła".
     
     Informacje:
     {RAG_KNOWLEDGE}

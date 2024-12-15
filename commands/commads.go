@@ -88,12 +88,25 @@ func (c *CommandContext) GetCommands(staffRole string, slowmodeSeconds int64) []
 				{
 					Name:        "urls",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Description: "Upload websites to remember",
+					Description: "Websites to remember",
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Name:        "urls",
 							Description: "Space separated URLs to remember",
 							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+					},
+				},
+				{
+					Name:        "channel",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Description: "Channel to remember",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "channel",
+							Description: "The channel from which all the attachments will be remembered",
+							Type:        discordgo.ApplicationCommandOptionChannel,
 							Required:    true,
 						},
 					},
