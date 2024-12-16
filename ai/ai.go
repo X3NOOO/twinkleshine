@@ -79,7 +79,11 @@ func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
 
 	switch strings.ToLower(strings.TrimSpace(providerEnv)) {
 	case "google":
-		llm, err = googleai.New(ctx, googleai.WithAPIKey(apiKey))
+		llm, err = googleai.New(
+			ctx,
+			googleai.WithAPIKey(apiKey),
+			googleai.WithHarmThreshold(googleai.HarmBlockNone),
+		)
 		if err != nil {
 			return nil, nil, err
 		}
