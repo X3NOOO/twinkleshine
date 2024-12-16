@@ -98,13 +98,7 @@ func getLLM(ctx context.Context) (llms.Model, *embeddings.EmbedderImpl, error) {
 	return llm, embedder, err
 }
 
-func getOptions() (*options, error) {
-	configFilePathEnv, ok := os.LookupEnv("CONFIG_FILE")
-	if !ok {
-		return nil, errors.New("CONFIG_FILE not set")
-	}
-	configFilePath := strings.TrimSpace(configFilePathEnv)
-
+func getOptions(configFilePath string) (*options, error) {
 	configFile, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
@@ -177,7 +171,7 @@ func getVDB(embedderImpl embeddings.EmbedderImpl) (*vectorstores.VectorStore, er
 	return &vdb, err
 }
 
-func NewAI() (*TwinkleshineAI, error) {
+func NewAI(configPath string) (*TwinkleshineAI, error) {
 	ctx := context.Background()
 
 	llm, embedder, err := getLLM(ctx)
@@ -185,7 +179,7 @@ func NewAI() (*TwinkleshineAI, error) {
 		return nil, err
 	}
 
-	options, err := getOptions()
+	options, err := getOptions(configPath)
 	if err != nil {
 		return nil, err
 	}

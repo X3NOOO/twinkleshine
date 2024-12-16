@@ -186,14 +186,14 @@ func (b *bot) getOnMessageCreateHandler(ctx *commands.CommandContext) func(s *di
 	}
 }
 
-func NewBot(token string) (*bot, error) {
+func NewBot(token string, configPath string) (*bot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		log.Printf("Invalid bot parameters: %v\n", err)
 		return nil, err
 	}
 
-	ai, err := ai.NewAI()
+	ai, err := ai.NewAI(configPath)
 	if err != nil {
 		log.Printf("Cannot create AI: %v\n", err)
 		return nil, err

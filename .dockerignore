@@ -1,0 +1,5 @@
+*.example
+*.md
+.github/
+.git/
+.git*

@@ -14,10 +14,12 @@ import (
 )
 
 var envFlag string
+var configFlag string
 var verboseFlag bool
 
 func main() {
 	flag.StringVar(&envFlag, "env", ".env", "Environment file")
+	flag.StringVar(&configFlag, "config", "config.yaml", "Config file")
 	flag.BoolVar(&verboseFlag, "verbose", false, "Verbose mode")
 	flag.Parse()
 
@@ -33,7 +35,7 @@ func main() {
 
 	_ = godotenv.Load(envFlag)
 
-	bot, err := discord.NewBot(os.Getenv("DISCORD_TOKEN"))
+	bot, err := discord.NewBot(os.Getenv("DISCORD_TOKEN"), configFlag)
 	if err != nil {
 		log.Fatalf("Cannot create the bot: %v\n", err)
 	}
