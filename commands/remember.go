@@ -142,7 +142,7 @@ func rememberUrls(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai.Tw
 	errs := make(chan error, len(urlList))
 
 	for _, url := range urlList {
-		go func(url string) {
+		/*go */ func(url string) {
 			log.Println("Processing URL:", url)
 
 			exists, err := ai.Exists("file.url", []any{url})
@@ -291,7 +291,7 @@ func rememberChannel(s *discordgo.Session, i *discordgo.InteractionCreate, ai ai
 
 	errs := make(chan error, len(allAttachements))
 	for _, att := range allAttachements {
-		go func(att *discordgo.MessageAttachment) {
+		/*go */ func(att *discordgo.MessageAttachment) {
 			log.Println("Processing attachment:", att.Filename)
 
 			exists, err := ai.Exists("file.name", []any{att.Filename})
@@ -492,7 +492,7 @@ func (c *CommandContext) RememberGUIHandler(s *discordgo.Session, i *discordgo.I
 	errs := make(chan error, len(attachments))
 
 	for _, att := range attachments {
-		go func(att *discordgo.MessageAttachment) {
+		/*go */ func(att *discordgo.MessageAttachment) {
 			log.Println("Processing attachment:", att.Filename)
 
 			exists, err := c.AI.Exists("file.name", []any{att.Filename})
